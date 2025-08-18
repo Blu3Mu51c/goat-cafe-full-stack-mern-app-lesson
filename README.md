@@ -41,27 +41,27 @@ This project includes a comprehensive, step-by-step course that teaches you how 
 
 ### 🎓 **Course Location: `FULL_STACK_COURSE/` folder**
 
-**Start here:** [FULL_STACK_COURSE/README.md](FULL_STACK_COURSE/README.md)
+**Start here:** [FULL_STACK_COURSE/README.md](./FULL_STACK_COURSE/README.md)
 
 ### 📖 **Course Structure**
 The course is organized into 9 numbered lessons plus additional explanatory files:
 
 #### **Core Lessons (Follow in Order)**
-1. [Project Setup and Configuration](FULL_STACK_COURSE/01_PROJECT_SETUP_AND_CONFIGURATION.md)
-2. [Backend Foundation and Server Setup](FULL_STACK_COURSE/02_BACKEND_FOUNDATION_AND_SERVER_SETUP.md)
-3. [JWT Authentication Implementation](FULL_STACK_COURSE/03_JWT_AUTHENTICATION_IMPLEMENTATION.md)
-4. [Database Models and Mongoose Schemas](FULL_STACK_COURSE/04_DATABASE_MODELS_AND_MONGOOSE_SCHEMAS.md)
-5. [Controllers and API Routes](FULL_STACK_COURSE/05_CONTROLLERS_AND_API_ROUTES.md)
-6. [Frontend Setup with Vite and React](FULL_STACK_COURSE/06_FRONTEND_SETUP_WITH_VITE_AND_REACT.md)
-7. [Utilities and Services Layer](FULL_STACK_COURSE/07_UTILITIES_AND_SERVICES_LAYER.md)
-8. [Component State Logic and React Hooks](FULL_STACK_COURSE/08_COMPONENT_STATE_LOGIC.md)
-9. [End-to-End Flow: Complete Application Walkthrough](FULL_STACK_COURSE/09_END_TO_END_FLOW.md)
+1. [Project Setup and Configuration](./FULL_STACK_COURSE/01_PROJECT_SETUP_AND_CONFIGURATION.md)
+2. [Backend Foundation and Server Setup](./FULL_STACK_COURSE/02_BACKEND_FOUNDATION_AND_SERVER_SETUP.md)
+3. [JWT Authentication Implementation](./FULL_STACK_COURSE/03_JWT_AUTHENTICATION_IMPLEMENTATION.md)
+4. [Database Models and Mongoose Schemas](./FULL_STACK_COURSE/04_DATABASE_MODELS_AND_MONGOOSE_SCHEMAS.md)
+5. [Controllers and API Routes](./FULL_STACK_COURSE/05_CONTROLLERS_AND_API_ROUTES.md)
+6. [Frontend Setup with Vite and React](./FULL_STACK_COURSE/06_FRONTEND_SETUP_WITH_VITE_AND_REACT.md)
+7. [Utilities and Services Layer](./FULL_STACK_COURSE/07_UTILITIES_AND_SERVICES_LAYER.md)
+8. [Component State Logic and React Hooks](./FULL_STACK_COURSE/08_COMPONENT_STATE_LOGIC.md)
+9. [End-to-End Flow: Complete Application Walkthrough](./FULL_STACK_COURSE/09_END_TO_END_FLOW.md)
 
 #### **Additional Resources**
-- [Code Explanations](FULL_STACK_COURSE/CODE_EXPLANATIONS.md) - Line-by-line backend code explanations
-- [Utility Logic Explanation](FULL_STACK_COURSE/UTILITY_LOGIC_EXPLANATION.md) - Frontend service layer details
-- [Component State Logic](FULL_STACK_COURSE/COMPONENT_STATE_LOGIC.md) - React state management patterns
-- [Debug Guide](FULL_STACK_COURSE/DEBUG_GUIDE.md) - Comprehensive troubleshooting
+- [Code Explanations](./FULL_STACK_COURSE/CODE_EXPLANATIONS.md) - Line-by-line backend code explanations
+- [Utility Logic Explanation](./FULL_STACK_COURSE/UTILITY_LOGIC_EXPLANATION.md) - Frontend service layer details
+- [Component State Logic](./FULL_STACK_COURSE/COMPONENT_STATE_LOGIC.md) - React state management patterns
+- [Debug Guide](./FULL_STACK_COURSE/DEBUG_GUIDE.md) - Comprehensive troubleshooting
 
 ## 🏗️ Project Architecture
 
@@ -108,8 +108,8 @@ curl -X POST http://localhost:3000/api/users/signup \
 
 If you encounter issues:
 
-1. **Check the Debug Guide**: [FULL_STACK_COURSE/DEBUG_GUIDE.md](FULL_STACK_COURSE/DEBUG_GUIDE.md)
-2. **Review Code Explanations**: [FULL_STACK_COURSE/CODE_EXPLANATIONS.md](FULL_STACK_COURSE/CODE_EXPLANATIONS.md)
+1. **Check the Debug Guide**: [FULL_STACK_COURSE/DEBUG_GUIDE.md](./FULL_STACK_COURSE/DEBUG_GUIDE.md)
+2. **Review Code Explanations**: [FULL_STACK_COURSE/CODE_EXPLANATIONS.md](./FULL_STACK_COURSE/CODE_EXPLANATIONS.md)
 3. **Verify your setup** against the course lessons
 4. **Check console errors** for specific messages
 
@@ -132,7 +132,7 @@ goat-cafe-vite/
 
 ## 🚀 Production Deployment
 
-For production deployment information, see: [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md)
+For production deployment information, see: [PRODUCTION_DEPLOYMENT.md](./PRODUCTION_DEPLOYMENT.md)
 
 ## 🤝 Contributing
 
@@ -151,7 +151,7 @@ This project is provided for educational purposes. Use the code examples to lear
 
 **Ready to learn full-stack development?** 
 
-1. **Start with the course**: [FULL_STACK_COURSE/README.md](FULL_STACK_COURSE/README.md)
+1. **Start with the course**: [FULL_STACK_COURSE/README.md](./FULL_STACK_COURSE/README.md)
 2. **Follow the lessons in order** (01-09)
 3. **Build along with the course**
 4. **Reference the additional resources** when you need deeper understanding
