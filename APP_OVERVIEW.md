@@ -71,6 +71,7 @@
 13. [Explanation of SCSS and SCSS Modules](#scss-explanation)
 14. [SCSS integration](#scss-integration)
 15. [Testing the full app in the browser](#testing-browser)
+16. [Refactoring to a Dynamic App Router](#refactor-router)
 
 ---
 
@@ -123,91 +124,71 @@ mkdir routes/api
 Create `app-server.js` in the root directory:
 
 ```javascript
-require('dotenv').config();
-require('./config/database');
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import cors from 'cors';
+import checkToken from './config/checkToken.js';
+import ensureLoggedIn from './config/ensureLoggedIn.js';
+import userRoutes from './routes/api/users.js';
+import itemRoutes from './routes/api/items.js';
+import orderRoutes from './routes/api/orders.js';
 
-const express = require('express');
-const path = require('path');
-const favicon = require('serve-favicon');
-const logger = require('morgan');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
-app.use(logger('dev'));
+app.use(cors());
 app.use(express.json());
+app.use((req, res, next) => {
+    res.locals.data = {}
+    next()
+})
 
-// Configure both serve-favicon & static middleware
-// to serve from the production 'build' folder
-app.use(favicon(path.join(__dirname, 'dist', 'favicon.ico')));
-app.use(express.static(path.join(__dirname, 'dist')));
+// API Routes - these must come before the static file serving
+app.use('/api/users', userRoutes);
+app.use('/api/items', checkToken, ensureLoggedIn, itemRoutes);
+app.use('/api/orders', checkToken, ensureLoggedIn, orderRoutes);
 
-// Check if token and create req.user
-app.use(require('./config/checkToken'));
+// Determine which directory to serve static files from
+const staticDir = process.env.NODE_ENV === 'production' ? 'dist' : 'public';
+const indexPath = process.env.NODE_ENV === 'production' ? 'dist/index.html' : 'index.html';
 
-// Put API routes here, before the "catch all" route
-app.use('/api/users', require('./routes/api/users'));
-// Protect the API routes below from anonymous users
-const ensureLoggedIn = require('./config/ensureLoggedIn');
-app.use('/api/items', ensureLoggedIn, require('./routes/api/items'));
-app.use('/api/orders', ensureLoggedIn, require('./routes/api/orders'));
+// Serve static files from the appropriate directory
+app.use(express.static(staticDir));
 
-// The following "catch all" route (note the *) is necessary
-// for a SPA (single page application) in order to miss all
-// API routes, and let the client router handle the routing.
-app.get('/*', function(req, res) {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+// For React Router - serve index.html for all non-API routes
+app.get('*', (req, res) => {
+    // Don't serve index.html for API routes
+    if (req.path.startsWith('/api/')) {
+        return res.status(404).json({ error: 'API endpoint not found' });
+    }
+    
+    // Serve the React app for all other routes
+    res.sendFile(path.resolve(path.join(__dirname, indexPath)));
 });
 
-const port = process.env.PORT || 3001;
-
-app.listen(port, function() {
-  console.log(`Express app running on port ${port}`);
-});
+export default app;
 ```
 
 Create `server.js` in the root directory:
 
 ```javascript
-require('dotenv').config();
-require('./config/database');
+import dotenv from 'dotenv';
 
-const express = require('express');
-const path = require('path');
-const favicon = require('serve-favicon');
-const logger = require('morgan');
+// Load environment variables FIRST
+dotenv.config();
 
-const app = express();
+// Then import other modules that need environment variables
+import './config/database.js';
+import app from './app-server.js';
 
-app.use(logger('dev'));
-app.use(express.json());
+const PORT = process.env.PORT || 3000;
 
-// Configure both serve-favicon & static middleware
-// to serve from the production 'build' folder
-app.use(favicon(path.join(__dirname, 'dist', 'favicon.ico')));
-app.use(express.static(path.join(__dirname, 'dist')));
-
-// Check if token and create req.user
-app.use(require('./config/checkToken'));
-
-// Put API routes here, before the "catch all" route
-app.use('/api/users', require('./routes/api/users'));
-// Protect the API routes below from anonymous users
-const ensureLoggedIn = require('./config/ensureLoggedIn');
-app.use('/api/items', ensureLoggedIn, require('./routes/api/items'));
-app.use('/api/orders', ensureLoggedIn, require('./routes/api/orders'));
-
-// The following "catch all" route (note the *) is necessary
-// for a SPA (single page application) in order to miss all
-// API routes, and let the client router handle the routing.
-app.get('/*', function(req, res) {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
-
-const port = process.env.PORT || 3001;
-
-app.listen(port, function() {
-  console.log(`Express app running on port ${port}`);
-});
+app.listen(PORT, () => {
+	console.log('We in the building on ' + PORT)
+})
 ```
 
 ### 2d. Installing packages, and updating package.json
@@ -215,8 +196,8 @@ app.listen(port, function() {
 Install the required packages:
 
 ```bash
-npm install express mongoose dotenv bcrypt jsonwebtoken cors serve-favicon morgan
-npm install --save-dev nodemon
+npm install express mongoose dotenv bcrypt jsonwebtoken cors react-router-dom
+npm install --save-dev nodemon concurrently sass
 ```
 
 Update your `package.json` to include these scripts:
@@ -229,35 +210,37 @@ Update your `package.json` to include these scripts:
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "nodemon server.js",
+    "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
     "build": "vite build",
-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview",
-    "server": "nodemon app-server.js",
-    "seed": "node config/seed.js"
+    "start": "NODE_ENV=production node server.js",
+    "start:dev": "NODE_ENV=development node server.js",
+    "lint": "eslint .",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "bcrypt": "^5.1.1",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "express": "^4.18.2",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.3",
-    "morgan": "^1.10.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.20.1",
-    "serve-favicon": "^2.5.0"
+    "bcrypt": "^5.1.1",
+    "jsonwebtoken": "^9.0.2",
+    "react-router-dom": "^6.8.0"
   },
   "devDependencies": {
-    "@types/react": "^18.2.37",
-    "@types/react-dom": "^18.2.15",
-    "@vitejs/plugin-react": "^4.1.1",
-    "eslint": "^8.53.0",
-    "eslint-plugin-react": "^7.33.2",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.4",
-    "nodemon": "^3.0.2",
-    "vite": "^5.0.0"
+    "@eslint/js": "^9.33.0",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^5.0.0",
+    "eslint": "^9.33.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^16.3.0",
+    "vite": "^7.1.2",
+    "sass": "^1.69.5",
+    "concurrently": "^8.2.2"
   }
 }
 ```
@@ -265,8 +248,9 @@ Update your `package.json` to include these scripts:
 Create a `.env` file in the root directory:
 
 ```env
-DATABASE_URL=mongodb://127.0.0.1:27017/goat-cafe
+MONGO_URI=mongodb://127.0.0.1:27017/goat-cafe
 SECRET=your-secret-key-here
+PORT=3000
 ```
 
 ---
@@ -278,8 +262,8 @@ SECRET=your-secret-key-here
 Create `models/user.js`:
 
 ```javascript
-const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+import mongoose from 'mongoose';
+import bcrypt from 'bcrypt';
 const Schema = mongoose.Schema;
 
 const SALT_ROUNDS = 6;
@@ -310,14 +294,14 @@ const userSchema = new Schema({
 });
 
 userSchema.pre('save', async function(next) {
-  // 'this' is the user document
+  // 'this' is the use document
   if (!this.isModified('password')) return next();
   // update the password with the computed hash
   this.password = await bcrypt.hash(this.password, SALT_ROUNDS);
   return next();
 });
 
-module.exports = mongoose.model('User', userSchema);
+export default mongoose.model('User', userSchema);
 ```
 
 **What this does**: Defines a user schema with name, email, and password fields. Uses bcrypt to hash passwords before saving and removes password from JSON responses for security.
@@ -327,7 +311,7 @@ module.exports = mongoose.model('User', userSchema);
 Create `models/category.js`:
 
 ```javascript
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 const Schema = mongoose.Schema;
 
 const categorySchema = new Schema({
@@ -337,7 +321,7 @@ const categorySchema = new Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Category', categorySchema);
+export default mongoose.model('Category', categorySchema);
 ```
 
 **What this does**: Simple schema for food categories with a name and sort order for organizing menu items.
@@ -347,9 +331,9 @@ module.exports = mongoose.model('Category', categorySchema);
 Create `models/itemSchema.js`:
 
 ```javascript
-const item = require('./item');
+import item from './item.js';
 
-const Schema = require('mongoose').Schema;
+const Schema = (await import('mongoose')).Schema;
 
 const itemSchema = new Schema({
   name: { type: String, required: true },
@@ -360,7 +344,7 @@ const itemSchema = new Schema({
   timestamps: true
 });
 
-module.exports = itemSchema;
+export default itemSchema;
 ```
 
 **What this does**: Defines the structure for individual menu items with name, emoji, category reference, and price.
@@ -370,13 +354,13 @@ module.exports = itemSchema;
 Create `models/item.js`:
 
 ```javascript
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 // Ensure the Category model is processed by Mongoose
-require('./category');
+import './category.js';
 
-const itemSchema = require('./itemSchema');
+import itemSchema from './itemSchema.js';
 
-module.exports = mongoose.model('Item', itemSchema);
+export default mongoose.model('Item', itemSchema);
 ```
 
 **What this does**: Creates the Item model from the schema and ensures the Category model is loaded for population.
@@ -386,9 +370,9 @@ module.exports = mongoose.model('Item', itemSchema);
 Create `models/order.js`:
 
 ```javascript
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 const Schema = mongoose.Schema;
-const itemSchema = require('./itemSchema');
+import itemSchema from './itemSchema.js';
 
 const lineItemSchema = new Schema({
   qty: { type: Number, default: 1 },
@@ -458,7 +442,7 @@ orderSchema.methods.setItemQty = function(itemId, newQty) {
   const lineItem = cart.lineItems.find(lineItem => lineItem.item._id.equals(itemId));
   if (lineItem && newQty <= 0) {
     // Calling remove, removes itself from the cart.lineItems array
-    lineItem.remove();
+    lineItem.deleteOne();
   } else if (lineItem) {
     // Set the new qty - positive value is assured thanks to prev if
     lineItem.qty = newQty;
@@ -467,7 +451,7 @@ orderSchema.methods.setItemQty = function(itemId, newQty) {
   return cart.save();
 };
 
-module.exports = mongoose.model('Order', orderSchema);
+export default mongoose.model('Order', orderSchema);
 ```
 
 **What this does**: Complex order schema with line items, virtuals for calculated fields, static methods for cart operations, and instance methods for cart manipulation.
@@ -494,58 +478,55 @@ module.exports = mongoose.model('Order', orderSchema);
 Create `config/database.js`:
 
 ```javascript
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
 
-mongoose.connect(process.env.DATABASE_URL);
+dotenv.config();    
 
-const db = mongoose.connection;
+mongoose.connect(process.env.MONGO_URI)
 
-db.on('connected', function() {
-  console.log(`Connected to MongoDB ${db.name} at ${db.host}:${db.port}`);
-});
+mongoose.connection.once('open', () => {
+    console.log('Mongo is showing us love')
+})
 ```
 
-**What this does**: Establishes connection to MongoDB using the DATABASE_URL from environment variables and logs connection status.
+**What this does**: Establishes connection to MongoDB using the MONGO_URI from environment variables and logs connection status.
 
 ### 4b. JWT Token Checking
 
 Create `config/checkToken.js`:
 
 ```javascript
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
-module.exports = function(req, res, next) {
-  // Check for the token being sent in three different ways
-  let token = req.get('Authorization') || req.query.token || req.body.token;
-  if (token) {
-    // Remove the 'Bearer ' if it was included in the token header
-    token = token.replace('Bearer ', '');
-    // Check if token is valid and not expired
-    jwt.verify(token, process.env.SECRET, function(err, decoded) {
-      if (err) {
-        req.user = null;
-      } else {
-        req.user = decoded.user;
-      }
-    });
-  } else {
-    req.user = null;
-  }
-  next();
-};
+export default (req, res, next) => {
+    let token = req.get('Authorization')
+    if(token){
+        token = token.split(' ')[1]
+        console.log('token', token)
+        jwt.verify(token, process.env.SECRET, (err, decoded) => {
+            req.user = err ? null : decoded.user
+            req.exp = err ? null : new Date(decoded.exp * 1000)
+        })
+        return next()
+    } else {
+        req.user = null 
+        return next()
+    }
+}
 ```
 
-**What this does**: Middleware that checks for JWT tokens in headers, query params, or body, verifies them, and attaches the decoded user to req.user for use in subsequent middleware.
+**What this does**: Middleware that checks for JWT tokens in headers, verifies them, and attaches the decoded user to req.user for use in subsequent middleware.
 
 ### 4c. Authentication Middleware
 
 Create `config/ensureLoggedIn.js`:
 
 ```javascript
-module.exports = function(req, res, next) {
-  if (req.user) return next();
-  res.status(401).json({ msg: 'unauthorized' });
-};
+export default (req, res, next ) => {
+    if(req.user) return next()
+    res.status('401').json({ msg: 'Unauthorized You Shall Not Pass'})
+}
 ```
 
 **What this does**: Simple middleware that checks if req.user exists (set by checkToken) and returns unauthorized error if no user is logged in.
@@ -555,11 +536,12 @@ module.exports = function(req, res, next) {
 Create `config/seed.js`:
 
 ```javascript
-require('dotenv').config();
-require('./database');
+import dotenv from 'dotenv';
+import './database.js';
+import Category from '../models/category.js';
+import Item from '../models/item.js';
 
-const Category = require('../models/category');
-const Item = require('../models/item');
+dotenv.config();
 
 (async function() {
 
@@ -618,9 +600,9 @@ const Item = require('../models/item');
 Create `controllers/api/users.js`:
 
 ```javascript
-const User = require('../../models/user')
-const jwt = require('jsonwebtoken')
-const bcrypt = require('bcrypt')
+import User from '../../models/user.js';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 
 const checkToken = (req, res) => {
   console.log('req.user', req.user)
@@ -662,11 +644,14 @@ const dataController = {
 
 const apiController = {
   auth (req, res) {
-    res.json(res.locals.data.token)
+    res.json({
+      token: res.locals.data.token,
+      user: res.locals.data.user
+    })
   }
 }
 
-module.exports = {
+export {
   checkToken,
   dataController,
   apiController
@@ -677,7 +662,7 @@ module.exports = {
 function createJWT (user) {
   return jwt.sign(
     // data payload
-    { user },
+    {  user },
     process.env.SECRET,
     { expiresIn: '24h' }
   )
@@ -691,9 +676,9 @@ function createJWT (user) {
 Create `controllers/api/orders.js`:
 
 ```javascript
-const Order = require('../../models/order');
+import Order from '../../models/order.js';
 
-module.exports = {
+export {
   cart,
   addToCart,
   setItemQtyInCart,
@@ -766,13 +751,18 @@ async function history(req, res) {
 Create `controllers/api/items.js`:
 
 ```javascript
-const Item = require('../../models/item');
+import Item from '../../models/item.js';
 
-module.exports = {
+export default {
   index,
   show
 };
+export {
+  index,
+  show
+}
 
+// GET /api/items
 async function index(req, res) {
   try{
     const items = await Item.find({}).sort('name').populate('category').exec();
@@ -805,10 +795,11 @@ async function show(req, res) {
 Create `routes/api/users.js`:
 
 ```javascript
-const express = require('express')
-const router = express.Router()
-const { checkToken, dataController, apiController } = require('../../controllers/api/users')
-const ensureLoggedIn = require('../../config/ensureLoggedIn')
+import express from 'express';
+import { checkToken, dataController, apiController } from '../../controllers/api/users.js';
+import ensureLoggedIn from '../../config/ensureLoggedIn.js';
+
+const router = express.Router();
 
 // POST /api/users
 router.post('/', dataController.create, apiController.auth)
@@ -818,7 +809,7 @@ router.post('/login', dataController.login, apiController.auth)
 // GET /api/users/check-token
 router.get('/check-token', ensureLoggedIn, checkToken)
 
-module.exports = router
+export default router;
 ```
 
 **What this does**: Defines user authentication routes for signup, login, and token verification with proper middleware protection.
@@ -828,22 +819,23 @@ module.exports = router
 Create `routes/api/orders.js`:
 
 ```javascript
-const express = require('express');
+import express from 'express';
+import { cart, addToCart, setItemQtyInCart, checkout, history } from '../../controllers/api/orders.js';
+
 const router = express.Router();
-const ordersCtrl = require('../../controllers/api/orders');
 
 // GET /api/orders/cart
-router.get('/cart', ordersCtrl.cart);
+router.get('/cart', cart);
 // GET /api/orders/history
-router.get('/history', ordersCtrl.history);
+router.get('/history', history);
 // POST /api/orders/cart/items/:id
-router.post('/cart/items/:id', ordersCtrl.addToCart);
+router.post('/cart/items/:id', addToCart);
 // POST /api/orders/cart/checkout
-router.post('/cart/checkout', ordersCtrl.checkout);
+router.post('/cart/checkout', checkout);
 // POST /api/orders/cart/qty
-router.put('/cart/qty', ordersCtrl.setItemQtyInCart);
+router.put('/cart/qty', setItemQtyInCart);
 
-module.exports = router;
+export default router;
 ```
 
 **What this does**: Defines all order management routes including cart operations, checkout, and order history retrieval.
@@ -853,16 +845,17 @@ module.exports = router;
 Create `routes/api/items.js`:
 
 ```javascript
-const express = require('express');
+import express from 'express';
+import itemsCtrl from '../../controllers/api/items.js';
+
 const router = express.Router();
-const itemsCtrl = require('../../controllers/api/items');
 
 // GET /api/items
 router.get('/', itemsCtrl.index);
 // GET /api/items/:id
 router.get('/:id', itemsCtrl.show);
 
-module.exports = router;
+export default router;
 ```
 
 **What this does**: Provides routes for retrieving menu items, either all items or individual items by ID.
@@ -893,9 +886,9 @@ The server files (`app-server.js` and `server.js`) are already created in sectio
 ### 8a. Setup Postman
 
 1. **Create a new collection** called "SEI CAFE API"
-2. **Set base URL** to `http://localhost:3001`
+2. **Set base URL** to `http://localhost:3000`
 3. **Create environment variables**:
-   - `baseUrl`: `http://localhost:3001`
+   - `baseUrl`: `http://localhost:3000`
    - `token`: (leave empty, will be set after login)
 
 ### 8b. Test User Routes
@@ -1014,18 +1007,27 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  css: {
+    preprocessorOptions: {
+      scss: {
+        // Remove the problematic import - we'll handle imports in individual files
+        // additionalData: `@import "src/index.scss";`
+      }
+    }
+  },
   server: {
+    port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-      },
-    },
-  },
+        target: 'http://localhost:3000',
+        changeOrigin: true
+      }
+    }
+  }
 })
 ```
 
-**What this does**: Sets up a development proxy so that API calls to `/api/*` from the frontend are forwarded to the backend server running on port 3001.
+**What this does**: Sets up a development proxy so that API calls to `/api/*` from the frontend are forwarded to the backend server running on port 3000.
 
 ---
 
@@ -1091,19 +1093,20 @@ Create `src/utilities/users-service.js`:
 import * as usersAPI  from './users-api';
 
 export async function signUp(userData) {
-  // Delete the network request code to the
-  // users-api.js module which will ultimately
-  // return the JWT
+  // The backend now returns { token: "...", user: {...} }
   const response = await usersAPI.signUp(userData);
   // Persist the token to localStorage
   localStorage.setItem('token', response.token);
-  return response.user
+  // Return the user object directly
+  return response.user;
 }
 
 export async function login(credentials) {
+  // The backend now returns { token: "...", user: {...} }
   const response = await usersAPI.login(credentials);
   // Persist the token to localStorage
   localStorage.setItem('token', response.token);
+  // Return the user object directly
   return response.user;
 }
 
@@ -1111,19 +1114,36 @@ export function getToken() {
   const token = localStorage.getItem('token');
   // getItem will return null if no key
   if (!token) return null;
-  const payload = JSON.parse(atob(token.split('.')[1]));
-  // A JWT's expiration is expressed in seconds, not miliseconds
-  if (payload.exp < Date.now() / 1000) {
-    // Token has expired
+  
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    // A JWT's expiration is expressed in seconds, not miliseconds
+    if (payload.exp < Date.now() / 1000) {
+      // Token has expired
+      localStorage.removeItem('token');
+      return null;
+    }
+    return token;
+  } catch (error) {
+    // Token is malformed or invalid
+    console.log('Invalid token, removing from localStorage');
     localStorage.removeItem('token');
     return null;
   }
-  return token;
 }
 
 export function getUser() {
   const token = getToken();
-  return token ? JSON.parse(atob(token.split('.')[1])).user : null;
+  if (!token) return null;
+  
+  try {
+    return JSON.parse(atob(token.split('.')[1])).user;
+  } catch (error) {
+    // Token is malformed, remove it
+    console.log('Invalid token format, removing from localStorage');
+    localStorage.removeItem('token');
+    return null;
+  }
 }
 
 export function logOut() {
@@ -1276,17 +1296,61 @@ Create `src/pages/App/App.module.scss`:
 Create `src/index.scss`:
 
 ```scss
+// CSS Custom Properties (Variables) - these are what the components actually use
 :root {
-  --white: #FFFFFF;
+  --white: ghostwhite;
   --tan-1: #FBF9F6;
   --tan-2: #E7E2DD;
   --tan-3: #E2D9D1;
   --tan-4: #D3C1AE;
-  --orange: #F67F00;
+  --orange: orangered;
   --text-light: #968c84;
-  --text-dark: #615954;
+  --text-dark: black;
 }
 
+// Global SCSS Variables and Mixins (for future use)
+$primary-color: #3498db;
+$secondary-color: #2ecc71;
+$text-color: #2c3e50;
+$border-radius: 8px;
+$shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+// Mixins
+@mixin button-style($bg-color, $text-color: white) {
+  background-color: $bg-color;
+  color: $text-color;
+  border: none;
+  border-radius: $border-radius;
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+}
+
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin card-style {
+  background: white;
+  border-radius: $border-radius;
+  box-shadow: $shadow;
+  padding: 20px;
+  transition: transform 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+}
+
+// Global styles
 *, *:before, *:after {
   box-sizing: border-box;
 }
@@ -1312,6 +1376,7 @@ code {
   height: 100%;
 }
 
+// Utility classes from the original CSS
 .align-ctr {
   text-align: center;
 }
@@ -1428,6 +1493,29 @@ button[type="submit"] {
   grid-column: span 2;
   margin: 1vmin 0 0;
 }
+
+// Additional utility classes
+.btn-primary {
+  @include button-style($primary-color);
+}
+
+.btn-secondary {
+  @include button-style($secondary-color);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.flex-center {
+  @include flex-center;
+}
+
+.card {
+  @include card-style;
+}
 ```
 
 **What this does**: Global CSS variables and utility classes for consistent styling across the entire application.
@@ -1446,7 +1534,7 @@ import styles from './Logo.module.scss';
 export default function Logo() {
   return (
     <div className={styles.Logo}>
-      <div>SEI</div>
+      <div>GOAT</div>
       <div>CAFE</div>
     </div>
   );
@@ -1471,7 +1559,7 @@ Create `src/components/Logo/Logo.module.scss`:
 }
 ```
 
-**What this does**: Displays the SEI CAFE logo as a circular orange badge with white text, used consistently across all pages.
+**What this does**: Displays the GOAT CAFE logo as a circular orange badge with white text, used consistently across all pages.
 
 ### 12b. LoginForm Component
 
@@ -2165,7 +2253,7 @@ Create `src/pages/AuthPage/AuthPage.module.scss`:
 }
 ```
 
-**What this does**: Authentication page that toggles between login and signup forms with the SEI CAFE logo and clickable header to switch modes.
+**What this does**: Authentication page that toggles between login and signup forms with the GOAT CAFE logo and clickable header to switch modes.
 
 ### 13b. NewOrderPage Component
 
@@ -2260,6 +2348,12 @@ Create `src/pages/NewOrderPage/NewOrderPage.module.scss`:
   grid-template-rows: 1fr;
   background-color: var(--white);
   border-radius: 2vmin;
+  div {
+    background-color: red;
+    a {
+      background-color: blue;
+    }
+  }
 }
 
 .NewOrderPage aside {
@@ -2431,7 +2525,7 @@ function Button() {
    ```bash
    npm run server
    ```
-   Expected: Console shows "Express app running on port 3001" and "Connected to MongoDB"
+   Expected: Console shows "Express app running on port 3000" and "Connected to MongoDB"
 
 2. **Seed the database** (if not already done):
    ```bash
@@ -2448,7 +2542,7 @@ function Button() {
 ### 16b. Testing User Flow
 
 #### Authentication Flow:
-1. **Landing Page**: Should show SEI CAFE logo with "LOG IN" form
+1. **Landing Page**: Should show GOAT CAFE logo with "LOG IN" form
 2. **Sign Up**: Click "LOG IN" text to switch to signup form
 3. **Create Account**: Fill out name, email, password, confirm password
 4. **Validation**: Form should disable submit button until passwords match
@@ -2491,8 +2585,8 @@ function Button() {
 ### 16d. Common Issues and Solutions
 
 #### Backend Issues:
-- **Database Connection**: Ensure MongoDB is running and DATABASE_URL is correct
-- **Port Conflicts**: Check if port 3001 is available, change in .env if needed
+- **Database Connection**: Ensure MongoDB is running and MONGO_URI is correct
+- **Port Conflicts**: Check if port 3000 is available, change in .env if needed
 - **JWT Errors**: Verify SECRET environment variable is set
 
 #### Frontend Issues:
@@ -2518,4 +2612,111 @@ The application should provide a complete restaurant ordering experience:
 - ✅ Real-time cart updates
 - ✅ Clean, intuitive user interface
 
-This completes the full-stack SEI CAFE application with all components, pages, and functionality working together seamlessly.
+This completes the full-stack GOAT CAFE application with all components, pages, and functionality working together seamlessly.
+
+---
+
+## 17. Refactoring to a Dynamic App Router
+
+After building and testing the initial application, we can refactor our routing to be more scalable and maintainable. Instead of hardcoding routes in `App.jsx`, we'll create a dynamic routing system that reads from a configuration file.
+
+### 17a. Create Routes Configuration
+
+Create `src/router/routes.js` to define all application routes in one place:
+
+```javascript
+import NewOrderPage from '../pages/NewOrderPage/NewOrderPage';
+import OrderHistoryPage from '../pages/OrderHistoryPage/OrderHistoryPage';
+
+const routes = [
+	{
+		Component: NewOrderPage,
+		key: 'NewOrder',
+		path: '/orders/new'
+	},
+	{
+		Component: OrderHistoryPage,
+		key: 'OrderHistory',
+		path: '/orders'
+	}
+];
+
+export default routes;
+```
+**What this does**: Centralizes all route definitions into an array of objects, making it easy to add or remove pages without touching the main router component.
+
+### 17b. Create the App Router Component
+
+Create `src/router/index.jsx`. This component will replace `src/pages/App/App.jsx` as the main router.
+
+```javascript
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import routes from './routes';
+import { useState } from 'react'
+import styles from './AppRouter.module.scss';
+import { getUser } from '../utilities/users-service';
+import AuthPage from '../pages/AuthPage/AuthPage';
+
+const AppRouter = () => {
+	const [user, setUser] = useState(getUser())
+	return (
+		<Router>
+			<main className={styles.App}>
+			{
+				user ?
+			<>
+			<Routes>
+				{routes.map(({ Component, key, path }) => (
+					<Route
+						key={key}
+						path={path}
+						element={
+						<Component 
+							page={key} 
+							user={user}
+							setUser={setUser}
+						/>
+						}
+					></Route>
+				))}
+				<Route path='/*' element={<Navigate to="/orders/new"/>}/>
+			</Routes>
+			</>
+			:
+		<AuthPage setUser={setUser}/>
+		}
+		</main>
+		</Router>
+	);
+};
+
+export default AppRouter;
+```
+**What this does**: This component dynamically generates routes by mapping over the `routes.js` configuration. It handles user authentication state and renders either the authenticated routes or the `AuthPage`.
+
+Create the corresponding style file `src/router/AppRouter.module.scss`:
+```scss
+.App {
+    height: 100%;
+  }
+```
+
+### 17c. Update the Main Entry Point
+
+Finally, update `src/main.jsx` to use the new `AppRouter`.
+
+```javascript
+import {StrictMode} from "react";
+import { createRoot } from "react-dom/client";
+import AppRouter from './router/index.jsx';
+import './index.scss';
+const root = createRoot(document.getElementById("root"))
+root.render(<StrictMode><AppRouter/></StrictMode>)
+```
+**What this does**: Changes the application's entry point to render `AppRouter` instead of the old `App` component, completing the refactor.
+
+### 17d. Clean Up
+
+You can now safely delete the `src/pages/App/` directory as it has been replaced by the `src/router/` setup.
+
+This refactored setup provides a much cleaner and more scalable way to manage routes as your application grows.
