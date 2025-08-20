@@ -97,13 +97,13 @@ goat-cafe-vite/
 Create a `.env` file in your root directory:
 ```bash
 # MongoDB Connection String
-MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/database
+MONGO_URI=mongodb://127.0.0.1:27017/goat-cafe
 
 # JWT Secret Key (use a strong, unique secret)
 SECRET=your-super-secret-jwt-key-here
 
 # Server Port
-PORT=8000
+PORT=3000
 ```
 
 ### Environment Variables Explained
@@ -157,7 +157,7 @@ After completing this setup:
 2. **Test Backend**: Run `npm run server` to test backend
 3. **Check Dependencies**: Ensure all packages are installed correctly
 4. **Environment Variables**: Verify `.env` file is properly configured
-5. **Move to Next File**: Continue with [02_BACKEND_FOUNDATION.md](02_BACKEND_FOUNDATION.md)
+5. **Move to Next File**: Continue with [02_BACKEND_FOUNDATION.md](./02_BACKEND_FOUNDATION.md)
 
 ## Common Setup Issues
 

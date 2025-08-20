@@ -41,36 +41,41 @@ Header.Payload.Signature
 ```javascript
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
+const Schema = mongoose.Schema;
 
-const userSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true }
+const SALT_ROUNDS = 6;
+
+const userSchema = new Schema({
+  name: { type: String, required: true },
+  email: {
+    type: String,
+    unique: true,
+    trim: true,
+    lowercase: true,
+    required: true
+  },
+  password: {
+    type: String,
+    trim: true,
+    minlength: 3,
+    required: true
+  }
 }, {
-    timestamps: true
+  timestamps: true,
+  toJSON: {
+    transform: function(doc, ret) {
+      delete ret.password;
+      return ret;
+    }
+  }
 });
 
-// Instance method - available on user instances
-userSchema.methods.comparePassword = async function(password) {
-    return bcrypt.compare(password, this.password);
-};
-
-// Static method - available on User model
-userSchema.statics.findByEmail = function(email) {
-    return this.findOne({ email });
-};
-
-// Middleware - runs before saving
 userSchema.pre('save', async function(next) {
-    if (!this.isModified('password')) return next();
-    
-    try {
-        const hashedPassword = await bcrypt.hash(this.password, 10);
-        this.password = hashedPassword;
-        next();
-    } catch (error) {
-        next(error);
-    }
+  // 'this' is the use document
+  if (!this.isModified('password')) return next();
+  // update the password with the computed hash
+  this.password = await bcrypt.hash(this.password, SALT_ROUNDS);
+  return next();
 });
 
 export default mongoose.model('User', userSchema);
@@ -114,7 +119,7 @@ userSchema.pre('save', async function(next) {
     if (!this.isModified('password')) return next();
     
     try {
-        const hashedPassword = await bcrypt.hash(this.password, 10);
+        const hashedPassword = await bcrypt.hash(this.password, 6);
         this.password = hashedPassword;
         next();
     } catch (error) {
@@ -123,7 +128,7 @@ userSchema.pre('save', async function(next) {
 });
 ```
 **Purpose**: Automatically hash passwords before saving to database
-**Security**: Uses bcrypt with salt rounds of 10
+**Security**: Uses bcrypt with salt rounds of 6
 
 ---
 
@@ -134,35 +139,27 @@ userSchema.pre('save', async function(next) {
 import jwt from 'jsonwebtoken';
 
 export default (req, res, next) => {
-    let token = req.get('Authorization');
-    
-    if (token) {
-        token = token.split(' ')[1];
-        
-        try {
-            const decoded = jwt.verify(token, process.env.SECRET);
-            req.user = decoded.user;
-            req.exp = new Date(decoded.exp * 1000);
-        } catch (err) {
-            req.user = null;
-            req.exp = null;
-        }
-        next();
+    let token = req.get('Authorization')
+    if(token){
+        token = token.split(' ')[1]
+        console.log('token', token)
+        jwt.verify(token, process.env.SECRET, (err, decoded) => {
+            req.user = err ? null : decoded.user
+            req.exp = err ? null : new Date(decoded.exp * 1000)
+        })
+        return next()
     } else {
-        req.user = null;
-        req.exp = null;
-        next();
+        req.user = null 
+        return next()
     }
-};
+}
 ```
 
 ### Create config/ensureLoggedIn.js
 ```javascript
-export default function ensureLoggedIn(req, res, next) {
-    if (!req.user) {
-        return res.status(401).json({ msg: "Unauthorized You Shall Not Pass" });
-    }
-    next();
+export default (req, res, next ) => {
+    if(req.user) return next()
+    res.status('401').json({ msg: 'Unauthorized You Shall Not Pass'})
 }
 ```
 
@@ -195,58 +192,70 @@ export default function ensureLoggedIn(req, res, next) {
 ### Create controllers/api/users.js
 ```javascript
 import User from '../../models/user.js';
-import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 
-const dataController = {
-    async signup(req, res, next) {
-        try {
-            const user = await User.create(req.body);
-            const token = createJWT(user);
-            res.locals.data.user = user;
-            res.locals.data.token = token;
-            next();
-        } catch (error) {
-            res.status(400).json({ error: error.message });
-        }
-    },
-
-    async login(req, res, next) {
-        try {
-            const user = await User.findOne({ email: req.body.email });
-            if (!user) throw new Error('User not found');
-            
-            const match = await bcrypt.compare(req.body.password, user.password);
-            if (!match) throw new Error('Password mismatch');
-            
-            const token = createJWT(user);
-            res.locals.data.user = user;
-            res.locals.data.token = token;
-            next();
-        } catch (error) {
-            res.status(400).json({ error: error.message });
-        }
-    }
-};
-
-const apiController = {
-    auth(req, res) {
-        res.json({
-            token: res.locals.data.token,
-            user: res.locals.data.user
-        });
-    }
-};
-
-function createJWT(user) {
-    return jwt.sign(
-        { user },
-        process.env.SECRET,
-        { expiresIn: '24h' }
-    );
+const checkToken = (req, res) => {
+  console.log('req.user', req.user)
+  res.json(req.exp)
 }
 
-export { dataController, apiController };
+const dataController = {
+  async create (req, res, next) {
+    try {
+      const user = await User.create(req.body)
+      console.log(req.body)
+      // token will be a string
+      const token = createJWT(user)
+      // send back the token as a string
+      // which we need to account for
+      // in the client
+      res.locals.data.user = user
+      res.locals.data.token = token
+      next()
+    } catch (e) {
+      console.log('you got a database problem')
+      res.status(400).json(e)
+    }
+  },
+  async login (req, res, next) {
+    try {
+      const user = await User.findOne({ email: req.body.email })
+      if (!user) throw new Error()
+      const match = await bcrypt.compare(req.body.password, user.password)
+      if (!match) throw new Error()
+      res.locals.data.user = user
+      res.locals.data.token = createJWT(user)
+      next()
+    } catch {
+      res.status(400).json('Bad Credentials')
+    }
+  }
+}
+
+const apiController = {
+  auth (req, res) {
+    res.json({
+      token: res.locals.data.token,
+      user: res.locals.data.user
+    })
+  }
+}
+
+function createJWT (user) {
+  return jwt.sign(
+    // data payload
+    {  user },
+    process.env.SECRET,
+    { expiresIn: '24h' }
+  )
+}
+
+export {
+  checkToken,
+  dataController,
+  apiController
+};
 ```
 
 ### Controller Pattern Explained
@@ -295,15 +304,18 @@ function createJWT(user) {
 ### Create routes/api/users.js
 ```javascript
 import express from 'express';
-import { dataController, apiController } from '../../controllers/api/users.js';
+import { checkToken, dataController, apiController } from '../../controllers/api/users.js';
+import ensureLoggedIn from '../../config/ensureLoggedIn.js';
 
 const router = express.Router();
 
-// POST /api/users/signup
-router.post('/signup', dataController.signup, apiController.auth);
-
+// POST /api/users
+router.post('/', dataController.create, apiController.auth)
 // POST /api/users/login
-router.post('/login', dataController.login, apiController.auth);
+router.post('/login', dataController.login, apiController.auth)
+
+// GET /api/users/check-token
+router.get('/check-token', ensureLoggedIn, checkToken)
 
 export default router;
 ```
@@ -314,7 +326,7 @@ export default router;
 ```
 POST /api/users/signup
 ↓
-dataController.signup (create user, generate token)
+dataController.create (create user, generate token)
 ↓
 apiController.auth (send response)
 ```
@@ -447,7 +459,7 @@ After completing this setup:
 1. **Test Authentication**: Verify signup and login work
 2. **Test Protected Routes**: Ensure middleware is working
 3. **Check Security**: Verify passwords are hashed
-4. **Move to Next File**: Continue with [04_DATABASE_MODELS.md](04_DATABASE_MODELS.md)
+4. **Move to Next File**: Continue with [04_DATABASE_MODELS.md](./04_DATABASE_MODELS.md)
 
 ## Verification Checklist
 

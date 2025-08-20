@@ -35,88 +35,35 @@ Controllers handle the business logic between routes and models. We use a two-co
 ```javascript
 import Item from '../../models/item.js';
 
-const dataController = {
-    async index(req, res, next) {
-        try {
-            const items = await Item.find({});
-            res.locals.data.items = items;
-            next();
-        } catch (error) {
-            res.status(400).json({ error: error.message });
-        }
-    },
-
-    async show(req, res, next) {
-        try {
-            const item = await Item.findById(req.params.id);
-            if (!item) throw new Error('Item not found');
-            res.locals.data.item = item;
-            next();
-        } catch (error) {
-            res.status(400).json({ error: error.message });
-        }
-    },
-
-    async create(req, res, next) {
-        try {
-            const item = await Item.create(req.body);
-            res.locals.data.item = item;
-            next();
-        } catch (error) {
-            res.status(400).json({ error: error.message });
-        }
-    },
-
-    async update(req, res, next) {
-        try {
-            const item = await Item.findByIdAndUpdate(
-                req.params.id,
-                req.body,
-                { new: true, runValidators: true }
-            );
-            if (!item) throw new Error('Item not found');
-            res.locals.data.item = item;
-            next();
-        } catch (error) {
-            res.status(400).json({ error: error.message });
-        }
-    },
-
-    async delete(req, res, next) {
-        try {
-            const item = await Item.findByIdAndDelete(req.params.id);
-            if (!item) throw new Error('Item not found');
-            res.locals.data.item = item;
-            next();
-        } catch (error) {
-            res.status(400).json({ error: error.message });
-        }
-    }
+export default {
+  index,
+  show
 };
+export {
+  index,
+  show
+}
 
-const apiController = {
-    index(req, res) {
-        res.json(res.locals.data.items);
-    },
+// GET /api/items
+async function index(req, res) {
+  try{
+    const items = await Item.find({}).sort('name').populate('category').exec();
+    // re-sort based upon the sortOrder of the categories
+    items.sort((a, b) => a.category.sortOrder - b.category.sortOrder);
+    res.status(200).json(items);
+  }catch(e){
+    res.status(400).json({ msg: e.message });
+  }
+}
 
-    show(req, res) {
-        res.json(res.locals.data.item);
-    },
-
-    create(req, res) {
-        res.status(201).json(res.locals.data.item);
-    },
-
-    update(req, res) {
-        res.json(res.locals.data.item);
-    },
-
-    delete(req, res) {
-        res.json({ message: 'Item deleted successfully' });
-    }
-};
-
-export { dataController, apiController };
+async function show(req, res) {
+  try{
+    const item = await Item.findById(req.params.id);
+    res.status(200).json(item);
+  }catch(e){
+    res.status(400).json({ msg: e.message });
+  }  
+}
 ```
 
 ### Controller Methods Explained
@@ -221,111 +168,70 @@ async delete(req, res, next) {
 ```javascript
 import Order from '../../models/order.js';
 
-const dataController = {
-    async index(req, res, next) {
-        try {
-            const orders = await Order.find({ user: req.user._id })
-                .populate('items.item')
-                .sort({ createdAt: -1 });
-            res.locals.data.orders = orders;
-            next();
-        } catch (error) {
-            res.status(400).json({ error: error.message });
-        }
-    },
-
-    async show(req, res, next) {
-        try {
-            const order = await Order.findById(req.params.id)
-                .populate('user')
-                .populate('items.item');
-            
-            if (!order) throw new Error('Order not found');
-            if (order.user._id.toString() !== req.user._id.toString()) {
-                throw new Error('Unauthorized to view this order');
-            }
-            
-            res.locals.data.order = order;
-            next();
-        } catch (error) {
-            res.status(400).json({ error: error.message });
-        }
-    },
-
-    async create(req, res, next) {
-        try {
-            req.body.user = req.user._id;
-            const order = await Order.create(req.body);
-            const populatedOrder = await Order.findById(order._id)
-                .populate('items.item');
-            res.locals.data.order = populatedOrder;
-            next();
-        } catch (error) {
-            res.status(400).json({ error: error.message });
-        }
-    },
-
-    async update(req, res, next) {
-        try {
-            const order = await Order.findById(req.params.id);
-            if (!order) throw new Error('Order not found');
-            if (order.user.toString() !== req.user._id.toString()) {
-                throw new Error('Unauthorized to modify this order');
-            }
-            
-            const updatedOrder = await Order.findByIdAndUpdate(
-                req.params.id,
-                req.body,
-                { new: true, runValidators: true }
-            ).populate('items.item');
-            
-            res.locals.data.order = updatedOrder;
-            next();
-        } catch (error) {
-            res.status(400).json({ error: error.message });
-        }
-    },
-
-    async delete(req, res, next) {
-        try {
-            const order = await Order.findById(req.params.id);
-            if (!order) throw new Error('Order not found');
-            if (order.user.toString() !== req.user._id.toString()) {
-                throw new Error('Unauthorized to delete this order');
-            }
-            
-            await Order.findByIdAndDelete(req.params.id);
-            res.locals.data.order = order;
-            next();
-        } catch (error) {
-            res.status(400).json({ error: error.message });
-        }
-    }
+export {
+  cart,
+  addToCart,
+  setItemQtyInCart,
+  checkout,
+  history
 };
 
-const apiController = {
-    index(req, res) {
-        res.json(res.locals.data.orders);
-    },
+// A cart is the unpaid order for a user
+async function cart(req, res) {
+  try{
+    const cart = await Order.getCart(req.user._id);
+    res.status(200).json(cart);
+  }catch(e){
+    res.status(400).json({ msg: e.message });
+  }
+}
 
-    show(req, res) {
-        res.json(res.locals.data.order);
-    },
+// Add an item to the cart
+async function addToCart(req, res) {
+  try{
+    const cart = await Order.getCart(req.user._id);
+    await cart.addItemToCart(req.params.id);
+    res.status(200).json(cart);
+  }catch(e){
+    res.status(400).json({ msg: e.message });
+  }  
+}
 
-    create(req, res) {
-        res.status(201).json(res.locals.data.order);
-    },
+// Updates an item's qty in the cart
+async function setItemQtyInCart(req, res) {
+  try{
+    const cart = await Order.getCart(req.user._id);
+    await cart.setItemQty(req.body.itemId, req.body.newQty);
+    res.status(200).json(cart);
+  }catch(e){
+    res.status(400).json({ msg: e.message });
+  }
+}
 
-    update(req, res) {
-        res.json(res.locals.data.order);
-    },
+// Update the cart's isPaid property to true
+async function checkout(req, res) {
+  try{
+    const cart = await Order.getCart(req.user._id);
+    cart.isPaid = true;
+    await cart.save();
+    res.status(200).json(cart);
+  }catch(e){
+    res.status(400).json({ msg: e.message });
+  }  
+}
 
-    delete(req, res) {
-        res.json({ message: 'Order deleted successfully' });
-    }
-};
-
-export { dataController, apiController };
+// Return the logged in user's paid order history
+async function history(req, res) {
+  // Sort most recent orders first
+  try{
+    const orders = await Order
+      .find({ user: req.user._id, isPaid: true })
+      .sort('-updatedAt').exec();
+    res.status(200).json(orders);
+  }catch(e){
+    res.status(400).json({ msg: e.message });
+  }
+}
 ```
 
 ### Orders Controller Features
@@ -366,24 +272,14 @@ req.body.user = req.user._id;
 ### Create routes/api/items.js
 ```javascript
 import express from 'express';
-import { dataController, apiController } from '../../controllers/api/items.js';
+import itemsCtrl from '../../controllers/api/items.js';
 
 const router = express.Router();
 
-// GET /api/items - List all items
-router.get('/', dataController.index, apiController.index);
-
-// GET /api/items/:id - Get single item
-router.get('/:id', dataController.show, apiController.show);
-
-// POST /api/items - Create new item
-router.post('/', dataController.create, apiController.create);
-
-// PUT /api/items/:id - Update item
-router.put('/:id', dataController.update, apiController.update);
-
-// DELETE /api/items/:id - Delete item
-router.delete('/:id', dataController.delete, apiController.delete);
+// GET /api/items
+router.get('/', itemsCtrl.index);
+// GET /api/items/:id
+router.get('/:id', itemsCtrl.show);
 
 export default router;
 ```
@@ -391,24 +287,20 @@ export default router;
 ### Create routes/api/orders.js
 ```javascript
 import express from 'express';
-import { dataController, apiController } from '../../controllers/api/orders.js';
+import { cart, addToCart, setItemQtyInCart, checkout, history } from '../../controllers/api/orders.js';
 
 const router = express.Router();
 
-// GET /api/orders - List user's orders
-router.get('/', dataController.index, apiController.index);
-
-// GET /api/orders/:id - Get single order
-router.get('/:id', dataController.show, apiController.show);
-
-// POST /api/orders - Create new order
-router.post('/', dataController.create, apiController.create);
-
-// PUT /api/orders/:id - Update order
-router.put('/:id', dataController.update, apiController.update);
-
-// DELETE /api/orders/:id - Delete order
-router.delete('/:id', dataController.delete, apiController.delete);
+// GET /api/orders/cart
+router.get('/cart', cart);
+// GET /api/orders/history
+router.get('/history', history);
+// POST /api/orders/cart/items/:id
+router.post('/cart/items/:id', addToCart);
+// POST /api/orders/cart/checkout
+router.post('/cart/checkout', checkout);
+// POST /api/orders/cart/qty
+router.put('/cart/qty', setItemQtyInCart);
 
 export default router;
 ```
@@ -627,7 +519,7 @@ After completing this setup:
 1. **Test All Routes**: Verify CRUD operations work
 2. **Test Authentication**: Ensure protected routes are secure
 3. **Test Error Handling**: Verify proper error responses
-4. **Move to Next File**: Continue with [06_FRONTEND_SETUP.md](06_FRONTEND_SETUP.md)
+4. **Move to Next File**: Continue with [06_FRONTEND_SETUP.md](./06_FRONTEND_SETUP.md)
 
 ## Verification Checklist
 

@@ -30,7 +30,7 @@ import app from './app-server.js';
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-    console.log('We in the building on ' + PORT)
+	console.log('We in the building on ' + PORT)
 })
 ```
 
@@ -64,7 +64,6 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use((req, res, next) => {
@@ -134,22 +133,15 @@ app.use('/api/orders', checkToken, ensureLoggedIn, orderRoutes);  // Protected
 Create the MongoDB connection configuration:
 ```javascript
 import mongoose from 'mongoose';
+import dotenv from 'dotenv';
 
-mongoose.connect(process.env.MONGO_URI);
+dotenv.config();    
 
-const db = mongoose.connection;
+mongoose.connect(process.env.MONGO_URI)
 
-db.on('connected', function() {
-    console.log(`Connected to MongoDB at ${db.host}:${db.port}`);
-});
-
-db.on('error', function(err) {
-    console.error('MongoDB connection error:', err);
-});
-
-db.on('disconnected', function() {
-    console.log('MongoDB disconnected');
-});
+mongoose.connection.once('open', () => {
+    console.log('Mongo is showing us love')
+})
 ```
 
 ### Connection Events Explained
@@ -307,7 +299,7 @@ After completing this setup:
 1. **Verify Server**: Ensure backend starts without errors
 2. **Test Database**: Confirm MongoDB connection is successful
 3. **Check Middleware**: Verify CORS and JSON parsing work
-4. **Move to Next File**: Continue with [03_JWT_AUTHENTICATION.md](03_JWT_AUTHENTICATION.md)
+4. **Move to Next File**: Continue with [03_JWT_AUTHENTICATION.md](./03_JWT_AUTHENTICATION.md)
 
 ## Verification Checklist
 

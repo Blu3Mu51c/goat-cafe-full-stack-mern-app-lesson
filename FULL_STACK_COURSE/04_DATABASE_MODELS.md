@@ -18,25 +18,45 @@ This file covers creating database models for items, orders, and understanding M
 ### Create models/item.js
 ```javascript
 import mongoose from 'mongoose';
+// Ensure the Category model is processed by Mongoose
+import './category.js';
 
-const itemSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    emoji: { type: String, required: true },
-    category: { type: String, required: true },
-    price: { type: Number, required: true }
-}, {
-    timestamps: true
-});
-
-// Virtual for formatted price
-itemSchema.virtual('formattedPrice').get(function() {
-    return `$${this.price.toFixed(2)}`;
-});
-
-// Ensure virtuals are included in JSON
-itemSchema.set('toJSON', { virtuals: true });
+import itemSchema from './itemSchema.js';
 
 export default mongoose.model('Item', itemSchema);
+```
+
+### Create models/itemSchema.js
+```javascript
+import item from './item.js';
+
+const Schema = (await import('mongoose')).Schema;
+
+const itemSchema = new Schema({
+  name: { type: String, required: true },
+  emoji: String,
+  category: { type: Schema.Types.ObjectId, ref: 'Category' },
+  price: { type: Number, required: true, default: 0 }
+}, {
+  timestamps: true
+});
+
+export default itemSchema;
+```
+
+### Create models/category.js
+```javascript
+import mongoose from 'mongoose';
+const Schema = mongoose.Schema;
+
+const categorySchema = new Schema({
+  name: { type: String, required: true },
+  sortOrder: Number
+}, {
+  timestamps: true
+});
+
+export default mongoose.model('Category', categorySchema);
 ```
 
 ### Item Model Features Explained
@@ -86,30 +106,85 @@ itemSchema.set('toJSON', { virtuals: true });
 ### Create models/order.js
 ```javascript
 import mongoose from 'mongoose';
+const Schema = mongoose.Schema;
+import itemSchema from './itemSchema.js';
 
-const orderSchema = new mongoose.Schema({
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    items: [{
-        item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item', required: true },
-        qty: { type: Number, required: true, min: 1 }
-    }],
-    isPaid: { type: Boolean, default: false }
+const lineItemSchema = new Schema({
+  qty: { type: Number, default: 1 },
+  item: itemSchema
 }, {
-    timestamps: true
+  timestamps: true,
+  toJSON: { virtuals: true }
 });
 
-// Virtual for total price
-orderSchema.virtual('total').get(function() {
-    return this.items.reduce((sum, item) => sum + (item.item.price * item.qty), 0);
+lineItemSchema.virtual('extPrice').get(function() {
+  // 'this' is bound to the lineItem subdoc
+  return this.qty * this.item.price;
 });
 
-// Virtual for total quantity
+const orderSchema = new Schema({
+  user: { type: Schema.Types.ObjectId, ref: 'User' },
+  lineItems: [lineItemSchema],
+  isPaid: { type: Boolean, default: false }
+}, {
+  timestamps: true,
+  toJSON: { virtuals: true }
+});
+
+orderSchema.virtual('orderTotal').get(function() {
+  return this.lineItems.reduce((total, item) => total + item.extPrice, 0);
+});
+
 orderSchema.virtual('totalQty').get(function() {
-    return this.items.reduce((sum, item) => sum + item.qty, 0);
+  return this.lineItems.reduce((total, item) => total + item.qty, 0);
 });
 
-// Ensure virtuals are included in JSON
-orderSchema.set('toJSON', { virtuals: true });
+orderSchema.virtual('orderId').get(function() {
+  return this.id.slice(-6).toUpperCase();
+});
+
+orderSchema.statics.getCart = function(userId) {
+  // 'this' is the Order model
+  return this.findOneAndUpdate(
+    // query
+    { user: userId, isPaid: false },
+    // update
+    { user: userId },
+    // upsert option will create the doc if
+    // it doesn't exist
+    { upsert: true, new: true }
+  );
+};
+
+orderSchema.methods.addItemToCart = async function(itemId) {
+  const cart = this;
+  // Check if item already in cart
+  const lineItem = cart.lineItems.find(lineItem => lineItem.item._id.equals(itemId));
+  if (lineItem) {
+    lineItem.qty += 1;
+  } else {
+    const item = await mongoose.model('Item').findById(itemId);
+    cart.lineItems.push({ item });
+  }
+  return cart.save();
+};
+
+// Instance method to set an item's qty in the cart (will add item if does not exist)
+orderSchema.methods.setItemQty = function(itemId, newQty) {
+  // this keyword is bound to the cart (order doc)
+  const cart = this;
+  // Find the line item in the cart for the menu item
+  const lineItem = cart.lineItems.find(lineItem => lineItem.item._id.equals(itemId));
+  if (lineItem && newQty <= 0) {
+    // Calling remove, removes itself from the cart.lineItems array
+    lineItem.deleteOne();
+  } else if (lineItem) {
+    // Set the new qty - positive value is assured thanks to prev if
+    lineItem.qty = newQty;
+  }
+  // return the save() method's promise
+  return cart.save();
+};
 
 export default mongoose.model('Order', orderSchema);
 ```
@@ -443,7 +518,7 @@ After completing this setup:
 1. **Test Models**: Verify all models work correctly
 2. **Test Relationships**: Ensure population works
 3. **Test Virtuals**: Check computed properties
-4. **Move to Next File**: Continue with [05_CONTROLLERS_AND_ROUTES.md](05_CONTROLLERS_AND_ROUTES.md)
+4. **Move to Next File**: Continue with [05_CONTROLLERS_AND_ROUTES.md](./05_CONTROLLERS_AND_ROUTES.md)
 
 ## Verification Checklist
 

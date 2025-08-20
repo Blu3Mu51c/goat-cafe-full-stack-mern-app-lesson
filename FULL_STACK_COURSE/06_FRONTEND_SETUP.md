@@ -20,12 +20,14 @@ This file covers setting up the React frontend with Vite, configuring SCSS suppo
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   css: {
     preprocessorOptions: {
       scss: {
-        // SCSS configuration
+        // Remove the problematic import - we'll handle imports in individual files
+        // additionalData: `@import "src/index.scss";`
       }
     }
   },
@@ -148,7 +150,7 @@ npm install sass
 ### Create Global SCSS File
 Create `src/index.scss`:
 ```scss
-// CSS Custom Properties (Variables)
+// CSS Custom Properties (Variables) - these are what the components actually use
 :root {
   --white: ghostwhite;
   --tan-1: #FBF9F6;
@@ -160,20 +162,45 @@ Create `src/index.scss`:
   --text-dark: black;
 }
 
-// Global SCSS Variables and Mixins
+// Global SCSS Variables and Mixins (for future use)
 $primary-color: #3498db;
 $secondary-color: #2ecc71;
+$text-color: #2c3e50;
+$border-radius: 8px;
+$shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
-@mixin button-style($bg-color) {
+// Mixins
+@mixin button-style($bg-color, $text-color: white) {
   background-color: $bg-color;
-  color: white;
-  padding: 10px 20px;
+  color: $text-color;
   border: none;
-  border-radius: 5px;
+  border-radius: $border-radius;
+  padding: 12px 24px;
   cursor: pointer;
+  transition: all 0.3s ease;
   
   &:hover {
-    background-color: darken($bg-color, 10%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+}
+
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin card-style {
+  background: white;
+  border-radius: $border-radius;
+  box-shadow: $shadow;
+  padding: 20px;
+  transition: transform 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   }
 }
 
@@ -184,28 +211,36 @@ $secondary-color: #2ecc71;
 
 body {
   margin: 0;
-  padding: 2vmin;
-  height: 100vh;
-  background-color: var(--tan-4);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+  sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--tan-4);
+  padding: 2vmin;
+  height: 100vh;
 }
 
-// Utility classes
-.btn-primary {
-  @include button-style($primary-color);
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
 }
 
-.btn-secondary {
-  @include button-style($secondary-color);
+#root {
+  height: 100%;
 }
 
-// Layout utilities
+// Utility classes from the original CSS
 .align-ctr {
   text-align: center;
+}
+
+.align-rt {
+  text-align: right;
+}
+
+.smaller {
+  font-size: smaller;
 }
 
 .flex-ctr-ctr {
@@ -218,384 +253,205 @@ body {
   flex-direction: column;
 }
 
+.flex-j-end {
+  justify-content: flex-end;
+}
+
+.scroll-y {
+  overflow-y: scroll;
+}
+
 .section-heading {
   display: flex;
   justify-content: space-around;
   align-items: center;
   background-color: var(--tan-1);
   color: var(--text-dark);
-  border: 0.1vmin solid var(--tan-3);
+  border: .1vmin solid var(--tan-3);
   border-radius: 1vmin;
-  padding: 0.6vmin;
+  padding: .6vmin;
   text-align: center;
   font-size: 2vmin;
+}
+
+.form-container {
+  padding: 3vmin;
+  background-color: var(--tan-1);
+  border: .1vmin solid var(--tan-3);
+  border-radius: 1vmin;
+}
+
+p.error-message {
+  color: var(--orange);
+  text-align: center;
+}
+
+form {
+  display: grid;
+  grid-template-columns: 1fr 3fr;
+  gap: 1.25vmin;
+  color: var(--text-light);
+}
+
+label {
+  font-size: 2vmin;
+  display: flex;
+  align-items: center;
+}
+
+input {
+  padding: 1vmin;
+  font-size: 2vmin;
+  border: .1vmin solid var(--tan-3);
+  border-radius: .5vmin;
+  color: var(--text-dark);
+  background-image: none !important; /* prevent lastpass */
+  outline: none;
+}
+
+input:focus {
+  border-color: var(--orange);
+}
+
+button, a.button {
+  margin: 1vmin;
+  padding: 1vmin;
+  color: var(--white);
+  background-color: var(--orange);
+  font-size: 2vmin;
+  font-weight: bold;
+  text-decoration: none;
+  text-align: center;
+  border: .1vmin solid var(--tan-2);
+  border-radius: .5vmin;
+  outline: none;
+  cursor: pointer;
+}
+
+button.btn-sm {
+  font-size: 1.5vmin;
+  padding: .6vmin .8vmin;
+}
+
+button.btn-xs {
+  font-size: 1vmin;
+  padding: .4vmin .5vmin;
+}
+
+button:disabled, form:invalid button[type="submit"] {
+  cursor: not-allowed;
+  background-color: var(--tan-4);
+}
+
+button[type="submit"] {
+  grid-column: span 2;
+  margin: 1vmin 0 0;
+}
+
+// Additional utility classes
+.btn-primary {
+  @include button-style($primary-color);
+}
+
+.btn-secondary {
+  @include button-style($secondary-color);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.flex-center {
+  @include flex-center;
+}
+
+.card {
+  @include card-style;
 }
 ```
 
 ### Import Global SCSS
 Update `src/main.jsx`:
 ```javascript
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.jsx'
-import './index.scss'
-
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)
+import {StrictMode} from "react";
+import { createRoot } from "react-dom/client";
+import AppRouter from './router/index.jsx';
+import './index.scss';
+const root = createRoot(document.getElementById("root"))
+root.render(<StrictMode><AppRouter/></StrictMode>)
 ```
 
 ---
 
 ## Component Architecture
 
-### Component Structure
-Each component follows this structure:
-```
-ComponentName/
-├── ComponentName.jsx    # React component
-├── ComponentName.module.scss  # Component-specific styles
-└── index.js            # Export file (optional)
-```
-
-### Example Component
-Create `src/components/Logo/Logo.jsx`:
+### App Router Setup
+Create `src/router/routes.js`:
 ```javascript
-import styles from './Logo.module.scss';
+import NewOrderPage from '../pages/NewOrderPage/NewOrderPage';
+import OrderHistoryPage from '../pages/OrderHistoryPage/OrderHistoryPage';
 
-export default function Logo() {
-  return (
-    <div className={styles.logo}>
-      <h1>🐐 Goat Cafe</h1>
-    </div>
-  );
-}
+const routes = [
+	{
+		Component: NewOrderPage,
+		key: 'NewOrder',
+		path: '/orders/new'
+	},
+	{
+		Component: OrderHistoryPage,
+		key: 'OrderHistory',
+		path: '/orders'
+	}
+];
+
+export default routes;
 ```
 
-Create `src/components/Logo/Logo.module.scss`:
-```scss
-.logo {
-  text-align: center;
-  margin-bottom: 2rem;
-  
-  h1 {
-    font-size: 3rem;
-    color: var(--orange);
-    margin: 0;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
-  }
-}
-```
-
-### CSS Modules Benefits
-- **Scoped Styles**: Styles only apply to specific components
-- **No Conflicts**: Prevents style collisions between components
-- **Dynamic Styling**: Use JavaScript variables in CSS
-- **Hot Reload**: Style changes update immediately
-
----
-
-## State Management Setup
-
-### Create AuthContext
-Create `src/contexts/AuthContext.jsx`:
+Create `src/router/index.jsx`:
 ```javascript
-import { createContext, useContext, useState, useEffect } from 'react';
-import * as usersService from '../utilities/users-service.js';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import routes from './routes';
+import { useState } from 'react'
+import styles from './AppRouter.module.scss';
+import { getUser } from '../utilities/users-service';
+import AuthPage from '../pages/AuthPage/AuthPage';
 
-const AuthContext = createContext();
+const AppRouter = () => {
+	const [user, setUser] = useState(getUser())
+	return (
+		<Router>
+			<main className={styles.App}>
+			{
+				user ?
+			<>
+			<Routes>
+				{routes.map(({ Component, key, path }) => (
+					<Route
+						key={key}
+						path={path}
+						element={
+						<Component 
+							page={key} 
+							user={user}
+							setUser={setUser}
+						/>
+						}
+					></Route>
+				))}
+				<Route path='/*' element={<Navigate to="/orders/new"/>}/>
+			</Routes>
+			</>
+			:
+		<AuthPage setUser={setUser}/>
+		}
+		</main>
+		</Router>
+	);
+};
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Check if user is already logged in
-    const user = usersService.getUser();
-    setUser(user);
-    setLoading(false);
-  }, []);
-
-  const signUp = async (userData) => {
-    try {
-      const user = await usersService.signUp(userData);
-      setUser(user);
-      return user;
-    } catch (error) {
-      throw error;
-    }
-  };
-
-  const login = async (credentials) => {
-    try {
-      const user = await usersService.login(credentials);
-      setUser(user);
-      return user;
-    } catch (error) {
-      throw error;
-    }
-  };
-
-  const logout = () => {
-    usersService.logOut();
-    setUser(null);
-  };
-
-  const value = {
-    user,
-    signUp,
-    login,
-    logout,
-    loading
-  };
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-}
-```
-
-### Update App Component
-Update `src/App.jsx`:
-```javascript
-import { AuthProvider } from './contexts/AuthContext.jsx';
-import AppContent from './AppContent.jsx';
-import './App.scss';
-
-function App() {
-  return (
-    <AuthProvider>
-      <div className="App">
-        <AppContent />
-      </div>
-    </AuthProvider>
-  );
-}
-
-export default App;
-```
-
-Create `src/AppContent.jsx`:
-```javascript
-import { useAuth } from './contexts/AuthContext.jsx';
-import LoginForm from './components/LoginForm/LoginForm.jsx';
-import Navigation from './components/Navigation/Navigation.jsx';
-import HomePage from './pages/HomePage/HomePage.jsx';
-
-function AppContent() {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  return (
-    <>
-      {user ? (
-        <>
-          <Navigation />
-          <HomePage />
-        </>
-      ) : (
-        <LoginForm />
-      )}
-    </>
-  );
-}
-
-export default AppContent;
-```
-
----
-
-## Basic Components
-
-### Create LoginForm Component
-Create `src/components/LoginForm/LoginForm.jsx`:
-```javascript
-import { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext.jsx';
-import styles from './LoginForm.module.scss';
-
-export default function LoginForm() {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
-  const [error, setError] = useState('');
-  const [isLogin, setIsLogin] = useState(true);
-  const { login, signUp } = useAuth();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    
-    try {
-      if (isLogin) {
-        await login(formData);
-      } else {
-        await signUp(formData);
-      }
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  return (
-    <div className={styles.loginContainer}>
-      <form onSubmit={handleSubmit} className={styles.loginForm}>
-        <h2>{isLogin ? 'Login' : 'Sign Up'}</h2>
-        
-        {error && <p className={styles.error}>{error}</p>}
-        
-        <div className={styles.formGroup}>
-          <label htmlFor="email">Email:</label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        
-        <div className={styles.formGroup}>
-          <label htmlFor="password">Password:</label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        
-        <button type="submit" className={styles.submitButton}>
-          {isLogin ? 'Login' : 'Sign Up'}
-        </button>
-        
-        <button
-          type="button"
-          onClick={() => setIsLogin(!isLogin)}
-          className={styles.toggleButton}
-        >
-          {isLogin ? 'Need an account? Sign Up' : 'Already have an account? Login'}
-        </button>
-      </form>
-    </div>
-  );
-}
-```
-
-Create `src/components/LoginForm/LoginForm.module.scss`:
-```scss
-.loginContainer {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  padding: 2rem;
-}
-
-.loginForm {
-  max-width: 400px;
-  width: 100%;
-  padding: 2rem;
-  background-color: var(--white);
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  
-  h2 {
-    text-align: center;
-    color: var(--text-dark);
-    margin-bottom: 1.5rem;
-  }
-  
-  .formGroup {
-    margin-bottom: 1rem;
-    
-    label {
-      display: block;
-      margin-bottom: 0.5rem;
-      color: var(--text-dark);
-      font-weight: 500;
-    }
-    
-    input {
-      width: 100%;
-      padding: 0.75rem;
-      border: 1px solid var(--tan-3);
-      border-radius: 4px;
-      font-size: 1rem;
-      
-      &:focus {
-        outline: none;
-        border-color: var(--orange);
-      }
-    }
-  }
-  
-  .submitButton {
-    width: 100%;
-    padding: 0.75rem;
-    background-color: var(--orange);
-    color: var(--white);
-    border: none;
-    border-radius: 4px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    margin-bottom: 1rem;
-    
-    &:hover {
-      background-color: darken(orangered, 10%);
-    }
-  }
-  
-  .toggleButton {
-    width: 100%;
-    padding: 0.5rem;
-    background: none;
-    border: 1px solid var(--tan-3);
-    border-radius: 4px;
-    color: var(--text-light);
-    cursor: pointer;
-    
-    &:hover {
-      background-color: var(--tan-1);
-    }
-  }
-  
-  .error {
-    color: var(--orange);
-    text-align: center;
-    margin-bottom: 1rem;
-    padding: 0.5rem;
-    background-color: rgba(255, 69, 0, 0.1);
-    border-radius: 4px;
-  }
-}
+export default AppRouter;
 ```
 
 ---
@@ -668,7 +524,7 @@ After completing this setup:
 1. **Verify Frontend**: Ensure all components render correctly
 2. **Test Styling**: Verify SCSS compilation works
 3. **Check Proxy**: Ensure API calls work correctly
-4. **Move to Next File**: Continue with [07_UTILITIES_AND_SERVICES.md](07_UTILITIES_AND_SERVICES.md)
+4. **Move to Next File**: Continue with [07_UTILITIES_AND_SERVICES.md](./07_UTILITIES_AND_SERVICES.md)
 
 ## Verification Checklist
 

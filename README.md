@@ -27,41 +27,29 @@ cd goat-cafe-vite
 npm install
 
 # Set up environment variables
-cp .env.example .env
-# Edit .env with your MongoDB URI and JWT secret
+# Create a .env file in the root and add your MONGO_URI, SECRET, and PORT
+# Example:
+# MONGO_URI=mongodb://127.0.0.1:27017/goat-cafe
+# SECRET=your-secret-key-here
+# PORT=3000
 
 # Start development servers
-npm run dev        # Frontend (Vite)
-npm run server     # Backend (Express)
+npm run dev:full
 ```
 
-## 📚 **Complete Course Available!**
+## 📚 **Build the App From Scratch!**
 
-This project includes a comprehensive, step-by-step course that teaches you how to build this full-stack application from scratch. 
+This project can be built from scratch by following our comprehensive, step-by-step guide. This is the recommended approach for students and anyone looking to learn full-stack development.
 
-### 🎓 **Course Location: `FULL_STACK_COURSE/` folder**
+### 🎓 **The Official Guide: [APP_OVERVIEW.md](./APP_OVERVIEW.md)**
 
-**Start here:** [FULL_STACK_COURSE/README.md](./FULL_STACK_COURSE/README.md)
+This single file contains everything you need, including:
+-   Complete setup instructions.
+-   All backend and frontend code snippets.
+-   Detailed explanations for every file and concept.
+-   A final refactoring guide to improve the app structure.
 
-### 📖 **Course Structure**
-The course is organized into 9 numbered lessons plus additional explanatory files:
-
-#### **Core Lessons (Follow in Order)**
-1. [Project Setup and Configuration](./FULL_STACK_COURSE/01_PROJECT_SETUP_AND_CONFIGURATION.md)
-2. [Backend Foundation and Server Setup](./FULL_STACK_COURSE/02_BACKEND_FOUNDATION_AND_SERVER_SETUP.md)
-3. [JWT Authentication Implementation](./FULL_STACK_COURSE/03_JWT_AUTHENTICATION_IMPLEMENTATION.md)
-4. [Database Models and Mongoose Schemas](./FULL_STACK_COURSE/04_DATABASE_MODELS_AND_MONGOOSE_SCHEMAS.md)
-5. [Controllers and API Routes](./FULL_STACK_COURSE/05_CONTROLLERS_AND_API_ROUTES.md)
-6. [Frontend Setup with Vite and React](./FULL_STACK_COURSE/06_FRONTEND_SETUP_WITH_VITE_AND_REACT.md)
-7. [Utilities and Services Layer](./FULL_STACK_COURSE/07_UTILITIES_AND_SERVICES_LAYER.md)
-8. [Component State Logic and React Hooks](./FULL_STACK_COURSE/08_COMPONENT_STATE_LOGIC.md)
-9. [End-to-End Flow: Complete Application Walkthrough](./FULL_STACK_COURSE/09_END_TO_END_FLOW.md)
-
-#### **Additional Resources**
-- [Code Explanations](./FULL_STACK_COURSE/CODE_EXPLANATIONS.md) - Line-by-line backend code explanations
-- [Utility Logic Explanation](./FULL_STACK_COURSE/UTILITY_LOGIC_EXPLANATION.md) - Frontend service layer details
-- [Component State Logic](./FULL_STACK_COURSE/COMPONENT_STATE_LOGIC.md) - React state management patterns
-- [Debug Guide](./FULL_STACK_COURSE/DEBUG_GUIDE.md) - Comprehensive troubleshooting
+---
 
 ## 🏗️ Project Architecture
 
@@ -90,70 +78,12 @@ The course is organized into 9 numbered lessons plus additional explanatory file
 
 ## 🧪 Testing
 
-### Backend Testing
-```bash
-# Test API endpoints
-curl -X POST http://localhost:3000/api/users/signup \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Test User","email":"test@example.com","password":"password123"}'
-```
-
-### Frontend Testing
-- Open browser developer tools
-- Check network requests
-- Verify authentication flow
-- Test responsive design
+The `APP_OVERVIEW.md` guide includes a detailed section on how to test all API endpoints using Postman.
 
 ## 🐛 Troubleshooting
 
-If you encounter issues:
-
-1. **Check the Debug Guide**: [FULL_STACK_COURSE/DEBUG_GUIDE.md](./FULL_STACK_COURSE/DEBUG_GUIDE.md)
-2. **Review Code Explanations**: [FULL_STACK_COURSE/CODE_EXPLANATIONS.md](./FULL_STACK_COURSE/CODE_EXPLANATIONS.md)
-3. **Verify your setup** against the course lessons
-4. **Check console errors** for specific messages
-
-## 📁 Project Structure
-
-```
-goat-cafe-vite/
-├── FULL_STACK_COURSE/          # 📚 Complete course materials
-├── src/                        # Frontend React components
-├── routes/                     # Backend API routes
-├── controllers/                # Backend business logic
-├── models/                     # MongoDB schemas
-├── config/                     # Configuration files
-├── public/                     # Static assets
-├── server.js                   # Backend entry point
-├── app-server.js              # Express app configuration
-├── vite.config.js             # Vite configuration
-└── package.json               # Dependencies and scripts
-```
+If you encounter issues, please refer to the detailed troubleshooting sections within the [APP_OVERVIEW.md](./APP_OVERVIEW.md) guide.
 
 ## 🚀 Production Deployment
 
 For production deployment information, see: [PRODUCTION_DEPLOYMENT.md](./PRODUCTION_DEPLOYMENT.md)
-
-## 🤝 Contributing
-
-This project serves as both a working application and a comprehensive learning resource. Feel free to:
-
-- Study the code and course materials
-- Build upon the foundation
-- Suggest improvements
-- Share your learning experience
-
-## 📄 License
-
-This project is provided for educational purposes. Use the code examples to learn and build your own applications.
-
-## 🎉 Get Started!
-
-**Ready to learn full-stack development?** 
-
-1. **Start with the course**: [FULL_STACK_COURSE/README.md](./FULL_STACK_COURSE/README.md)
-2. **Follow the lessons in order** (01-09)
-3. **Build along with the course**
-4. **Reference the additional resources** when you need deeper understanding
-
-**Happy coding! 🚀**
