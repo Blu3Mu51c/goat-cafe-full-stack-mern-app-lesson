@@ -2349,7 +2349,7 @@ Create `src/pages/NewOrderPage/NewOrderPage.module.scss`:
   background-color: var(--white);
   border-radius: 2vmin;
   div {
-    background-color: red;
+    background-color: #fdfcf1;
     a {
       background-color: blue;
     }
