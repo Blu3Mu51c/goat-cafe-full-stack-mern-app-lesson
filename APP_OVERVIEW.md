@@ -589,7 +589,7 @@ dotenv.config();
 })();
 ```
 
-**What this does**: Populates the database with sample categories and menu items for testing. Run with `npm run seed` to populate your database.
+**What this does**: Populates the database with sample categories and menu items for testing. Run with `node config/seed.js` to populate your database.
 
 ---
 
@@ -982,7 +982,7 @@ The server files (`app-server.js` and `server.js`) are already created in sectio
 ### 8e. Testing Flow
 
 1. **Start the server**: `npm run server`
-2. **Seed the database**: `npm run seed`
+2. **Seed the database**: `node config/seed.js`
 3. **Test signup** to create a user
 4. **Test login** to get a token
 5. **Test protected routes** using the token
@@ -2529,7 +2529,7 @@ function Button() {
 
 2. **Seed the database** (if not already done):
    ```bash
-   npm run seed
+   node config/seed.js
    ```
    Expected: Console shows created items and categories
 
