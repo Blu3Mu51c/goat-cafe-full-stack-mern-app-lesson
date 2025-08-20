@@ -1094,17 +1094,17 @@ export async function signUp(userData) {
   // Delete the network request code to the
   // users-api.js module which will ultimately
   // return the JWT
-  const token = await usersAPI.signUp(userData);
+  const response = await usersAPI.signUp(userData);
   // Persist the token to localStorage
-  localStorage.setItem('token', token);
-  return getUser();
+  localStorage.setItem('token', response.token);
+  return response.user
 }
 
 export async function login(credentials) {
-  const token = await usersAPI.login(credentials);
+  const response = await usersAPI.login(credentials);
   // Persist the token to localStorage
-  localStorage.setItem('token', token);
-  return getUser();
+  localStorage.setItem('token', response.token);
+  return response.user;
 }
 
 export function getToken() {
