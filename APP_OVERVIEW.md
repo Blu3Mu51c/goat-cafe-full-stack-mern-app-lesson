@@ -1,4 +1,4 @@
-# SEI CAFE - Full Stack App Build Guide
+# Goat Cafe Vite - Full Stack App Build Guide
 
 <center>
 
