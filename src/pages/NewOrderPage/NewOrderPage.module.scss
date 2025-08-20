@@ -5,6 +5,12 @@
     grid-template-rows: 1fr;
     background-color: var(--white);
     border-radius: 2vmin;
+    div {
+      background-color: red;
+      a {
+        background-color: blue;
+      }
+    }
   }
   
   .NewOrderPage aside {
